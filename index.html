@@ -1,0 +1,149 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jambalaya</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-start: #0f1226;
+        --bg-end: #1b2439;
+        --text: #eef2f7;
+        --muted: #a9b3c9;
+        --accent: #6ee7f9;
+        --accent-2: #8b5cf6;
+        --card: rgba(255, 255, 255, 0.06);
+        --card-border: rgba(255, 255, 255, 0.12);
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: Poppins, ui-sans-serif, system-ui, -apple-system, Segoe UI,
+          Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        color: var(--text);
+        background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+
+      h1 {
+        margin-bottom: 48px;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        max-width: 780px;
+        width: 100%;
+      }
+
+      #results {
+        width: 100%;
+        min-height: 8.25rem;
+        padding: 16px 18px;
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--shadow);
+        text-align: center;
+        font-size: 1.15rem;
+        line-height: 1.45;
+        color: var(--text);
+        animation: fadeIn 280ms ease-out;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        height: 74px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #0c1022;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 6px 16px rgba(107, 114, 128, 0.25);
+        transition: transform 120ms ease, filter 120ms ease,
+          box-shadow 120ms ease;
+        cursor: pointer;
+        width: 90%;
+      }
+
+      button.secondary {
+        background: none;
+        border: 1px solid white;
+        color: white;
+      }
+
+      button:hover {
+        filter: brightness(1.05);
+      }
+      button:active {
+        transform: translateY(1px) scale(0.99);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .vis-hidden {
+        visibility: hidden;
+      }
+
+      @media (max-width: 480px) {
+        button {
+          width: 90%;
+        }
+        #results {
+          font-size: 1.05rem;
+          padding: 14px 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Jambalaya</h1>
+    <div class="app">
+      <button id="spin">Get a jam</button>
+      <div id="results"></div>
+      <button id="replay-speech" class="vis-hidden secondary">
+        Replay Speech
+      </button>
+      <button id="replay-scale" class="vis-hidden secondary">
+        Replay Scale
+      </button>
+    </div>
+  </body>
+  <script src="http://unpkg.com/tone"></script>
+
+  <script src="script.js"></script>
+</html>
