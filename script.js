@@ -412,9 +412,6 @@ const abstractJam = () => {
 };
 
 async function startJam(kind) {
-  const replaySpeech = document.getElementById("replay-speech");
-  if (replaySpeech) replaySpeech.classList.remove("vis-hidden");
-
   if (!SKIP_LOADER) startLoader();
 
   // ensure AudioContext is started by user gesture
@@ -460,6 +457,9 @@ async function startJam(kind) {
     voices.find((v) => v.name === "Alex");
 
   const setJam = () => {
+    const replaySpeech = document.getElementById("replay-speech");
+    if (replaySpeech) replaySpeech.classList.remove("vis-hidden");
+
     if (kind === "technical") {
       technicalJam();
     } else if (kind === "abstract") {
