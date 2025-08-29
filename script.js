@@ -3,7 +3,7 @@ const reverb = new Tone.Reverb({
   decay: 2.8,
   preDelay: 0.02,
   wet: 0.25,
-}).toDestination();
+}).toMaster();
 const chorus = new Tone.Chorus({
   frequency: 1.6,
   delayTime: 0.25,
@@ -239,21 +239,21 @@ let voicesReadyPromise = null;
 // Wait until browser voices are loaded, then return them
 function waitForVoices() {
   return new Promise((resolve) => {
-    const synth = window.speechSynthesis;
-    const voices = synth.getVoices();
+    const speechSynthesis = window.speechSynthesis;
+    const voices = speechSynthesis.getVoices();
     console.log(voices);
     if (voices && voices.length) {
       resolve(voices);
       return;
     }
     const handler = () => {
-      const loaded = synth.getVoices();
+      const loaded = speechSynthesis.getVoices();
       if (loaded && loaded.length) {
-        synth.removeEventListener("voiceschanged", handler);
+        speechSynthesis.removeEventListener("voiceschanged", handler);
         resolve(loaded);
       }
     };
-    synth.addEventListener("voiceschanged", handler);
+    speechSynthesis.addEventListener("voiceschanged", handler);
   });
 }
 
@@ -288,15 +288,16 @@ const playScale = (key, mode) => {
     activeSequence.dispose();
     activeSequence = undefined;
   }
-
+  // necessary for Safari
+  synth.context.resume();
   activeSequence = new Tone.Sequence(
     (time, note) => {
       const velocity = 0.7 + (Math.random() * 0.2 - 0.1);
       synth.triggerAttackRelease(
         note,
         "8n",
-        time,
-        Math.max(0.5, Math.min(0.9, velocity))
+        time
+        // Math.max(0.5, Math.min(0.9, velocity))
       );
     },
     scaleNotes,
