@@ -436,19 +436,24 @@ const technicalJam = async () => {
   };
   utterance.onerror = (e) => console.log("Technical speech error:", e);
 
-  console.log("About to speak:", speech);
-  console.log("Using voice:", voice);
-  speechSynthesis.speak(utterance);
-  console.log("Speak called");
+  // Only try automatic speech if skipLoader is enabled
+  if (SKIP_LOADER) {
+    console.log("About to speak:", speech);
+    console.log("Using voice:", voice);
+    speechSynthesis.speak(utterance);
+    console.log("Speak called");
+  }
 
-  // Always add read aloud button for reliable iOS support
-  const results = document.getElementById("results");
-  results.innerHTML += `<br><button onclick="
+  // Add read aloud button
+  const speechButton = `<br><button onclick="
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance('${speech.replace(/'/g, "\\'")}');
     u.voice = speechSynthesis.getVoices().find(v => v.name === 'Fred') || speechSynthesis.getVoices()[0];
     speechSynthesis.speak(u);
   " style="margin-top: 12px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; cursor: pointer; margin-left: 12px;">🔊 Read Aloud</button>`;
+
+  const results = document.getElementById("results");
+  results.innerHTML += speechButton;
 };
 
 const abstractJam = () => {
@@ -481,19 +486,24 @@ const abstractJam = () => {
   utterance.onend = () => console.log("Abstract speech ended");
   utterance.onerror = (e) => console.log("Abstract speech error:", e);
 
-  console.log("About to speak abstract:", speech);
-  console.log("Using voice:", voice);
-  speechSynthesis.speak(utterance);
-  console.log("Abstract speak called");
+  // Only try automatic speech if skipLoader is enabled
+  if (SKIP_LOADER) {
+    console.log("About to speak abstract:", speech);
+    console.log("Using voice:", voice);
+    speechSynthesis.speak(utterance);
+    console.log("Abstract speak called");
+  }
 
-  // Always add read aloud button for reliable iOS support
-  const results = document.getElementById("results");
-  results.innerHTML += `<br><button onclick="
+  // Add read aloud button
+  const speechButton = `<br><button onclick="
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance('${speech.replace(/'/g, "\\'")}');
     u.voice = speechSynthesis.getVoices().find(v => v.name === 'Fred') || speechSynthesis.getVoices()[0];
     speechSynthesis.speak(u);
   " style="margin-top: 12px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; cursor: pointer;">🔊 Read Aloud</button>`;
+
+  const results = document.getElementById("results");
+  results.innerHTML += speechButton;
 
   lastSpeechText = speech;
 };
