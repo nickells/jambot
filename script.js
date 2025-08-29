@@ -29,7 +29,7 @@ const synth = new Tone.MonoSynth({
 let samplerLoaded = false;
 let sampler;
 // Boost piano loudness a bit via a dedicated gain stage
-const pianoGain = new Tone.Gain(20).chain(chorus, reverb);
+const pianoGain = new Tone.Gain(18).chain(chorus, reverb);
 try {
   sampler = new Tone.Sampler({
     urls: {
