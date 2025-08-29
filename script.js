@@ -281,6 +281,17 @@ let voicesReadyPromise = null;
 const SKIP_LOADER = new URLSearchParams(window.location.search).has(
   "skipLoader"
 );
+let speechPrimed = false;
+
+// iOS Safari: require an utterance during a user gesture to allow later utterances in timers
+function primeSpeechForIOS() {
+  if (speechPrimed) return;
+  try {
+    const u = new SpeechSynthesisUtterance("");
+    window.speechSynthesis.speak(u);
+    speechPrimed = true;
+  } catch (_) {}
+}
 
 // Wait until browser voices are loaded, then return them
 function waitForVoices() {
@@ -421,6 +432,8 @@ async function startJam(kind) {
   const thisClickId = currentUtteranceId;
   const speechSynthesis = window.speechSynthesis;
   speechSynthesis.cancel();
+  // Prime Web Speech on iOS Safari so later timeouts can speak
+  primeSpeechForIOS();
   if (activeSequence) {
     activeSequence.stop();
     activeSequence.dispose();
