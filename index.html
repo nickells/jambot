@@ -96,6 +96,12 @@
         }
       }
 
+      .button-group {
+        display: flex;
+        gap: 16px;
+        width: 90%;
+      }
+
       button {
         appearance: none;
         border: none;
@@ -148,7 +154,15 @@
   <body>
     <h1>Jambalaya</h1>
     <div class="app">
-      <button id="spin">Get a jam</button>
+      <div class="button-group">
+        <button id="spin-technical" class="secondary">
+          Get a structured jam
+        </button>
+        <button id="spin-abstract" class="secondary">
+          Get an abstract jam
+        </button>
+      </div>
+      <button id="spin">Pick for me</button>
       <div id="results"></div>
       <button id="replay-speech" class="vis-hidden secondary">
         Replay Speech

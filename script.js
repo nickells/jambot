@@ -3,7 +3,7 @@ const reverb = new Tone.Reverb({
   decay: 2.8,
   preDelay: 0.02,
   wet: 0.25,
-}).toMaster();
+}).toDestination();
 const chorus = new Tone.Chorus({
   frequency: 1.6,
   delayTime: 0.25,
@@ -24,6 +24,35 @@ const synth = new Tone.MonoSynth({
   },
   portamento: 0.01,
 }).chain(chorus, reverb);
+
+// Optional: piano sampler rooted at Gb4 (enharmonic F#4). Will transpose for other notes.
+let samplerLoaded = false;
+let sampler;
+// Boost piano loudness a bit via a dedicated gain stage
+const pianoGain = new Tone.Gain(20).chain(chorus, reverb);
+try {
+  sampler = new Tone.Sampler({
+    urls: {
+      //   Gb4: "Gb4.aiff",
+      C3: "C3.aiff",
+    },
+    onload: () => {
+      console.log("loaded");
+      samplerLoaded = true;
+    },
+  }).connect(pianoGain);
+} catch (e) {
+  samplerLoaded = false;
+}
+
+// Helper to play a single note with either the sampler (if ready) or the synth
+function playNote(note, duration, time, velocity) {
+  if (samplerLoaded && sampler) {
+    sampler.triggerAttackRelease(note, duration, time, velocity);
+  } else {
+    synth.triggerAttackRelease(note, duration, time, velocity);
+  }
+}
 
 //play a middle 'C' for the duration of an 8th note
 const tempos = ["an upbeat", "a slow", "a midtempo", "a fast"];
@@ -224,6 +253,20 @@ const announcements = [
   "Here we go!",
   "Let's do this!",
   "Ready?",
+  "Beep boop!",
+  "Ding dong!",
+  "Bing bang!",
+  "Dingaling!",
+  "Here's your next one.",
+  "Try this.",
+  "Another for you.",
+  "Next up.",
+  "Give this a go.",
+  "See what you think.",
+  "Here's one.",
+  "Let's try this.",
+  "Check this out.",
+  "One more for you.",
 ];
 
 let voice;
@@ -235,6 +278,9 @@ let lastTechnicalKey = null;
 let lastTechnicalMode = null;
 let pendingStartTimer = null;
 let voicesReadyPromise = null;
+const SKIP_LOADER = new URLSearchParams(window.location.search).has(
+  "skipLoader"
+);
 
 // Wait until browser voices are loaded, then return them
 function waitForVoices() {
@@ -292,13 +338,8 @@ const playScale = (key, mode) => {
   synth.context.resume();
   activeSequence = new Tone.Sequence(
     (time, note) => {
-      const velocity = 0.7 + (Math.random() * 0.2 - 0.1);
-      synth.triggerAttackRelease(
-        note,
-        "8n",
-        time
-        // Math.max(0.5, Math.min(0.9, velocity))
-      );
+      const velocity = 0.9 + (Math.random() * 0.2 - 0.1);
+      playNote(note, "8n", time, Math.max(0.75, Math.min(1.0, velocity)));
     },
     scaleNotes,
     "8n"
@@ -308,7 +349,6 @@ const playScale = (key, mode) => {
   activeSequence.start("+0");
   if (Tone.Transport.state !== "started") {
     Tone.Transport.start();
-    debugger;
   }
 };
 
@@ -371,11 +411,11 @@ const abstractJam = () => {
   lastSpeechText = speech;
 };
 
-async function go() {
+async function startJam(kind) {
   const replaySpeech = document.getElementById("replay-speech");
   if (replaySpeech) replaySpeech.classList.remove("vis-hidden");
 
-  startLoader();
+  if (!SKIP_LOADER) startLoader();
 
   // ensure AudioContext is started by user gesture
   await Tone.start();
@@ -396,41 +436,70 @@ async function go() {
   }
 
   // Play click track immediately (do not await finish)
-  try {
-    const click = new Audio("clickclack.mp3");
-    click.volume = 0.4;
-    click.play().catch(() => {});
-  } catch (_) {}
+  if (!SKIP_LOADER) {
+    try {
+      const click = new Audio("clickclack.mp3");
+      click.volume = 0.4;
+      click.play().catch(() => {});
+    } catch (_) {}
+  }
 
   // Begin loading voices now so they are ready in time
   voicesReadyPromise = waitForVoices();
 
-  setTimeout(() => {
-    stopLoader();
-    const results = document.getElementById("results");
-    results.innerHTML = `<span class="loader">🥗</span>`;
-  }, 250 * 13);
+  if (!SKIP_LOADER) {
+    setTimeout(() => {
+      stopLoader();
+      const results = document.getElementById("results");
+      results.innerHTML = `<span class="loader">🥗</span>`;
+    }, 250 * 13);
+  }
+  const voices = await voicesReadyPromise;
+  voice =
+    voices.find((v) => v.name.includes("Aaron")) ||
+    voices.find((v) => v.name === "Alex");
 
-  // Schedule speech start exactly 4.5s from click
-  pendingStartTimer = setTimeout(async () => {
-    if (thisClickId !== currentUtteranceId) return; // another click occurred
-    const voices = await voicesReadyPromise;
-    console.log(voices.filter((v) => v.lang.includes("en-US")));
-    voice =
-      voices.find((v) => v.name.includes("Aaron")) ||
-      voices.find((v) => v.name === "Alex");
-
-    if (Math.random() < 0.5) {
+  const setJam = () => {
+    if (kind === "technical") {
       technicalJam();
-    } else {
+    } else if (kind === "abstract") {
       abstractJam();
+    } else {
+      if (Math.random() < 0.5) {
+        technicalJam();
+      } else {
+        abstractJam();
+      }
     }
-  }, 4500);
+  };
+
+  if (SKIP_LOADER) {
+    setJam();
+  } else {
+    // Schedule speech start exactly 4.5s from click
+    pendingStartTimer = setTimeout(async () => {
+      if (thisClickId !== currentUtteranceId) return; // another click occurred
+      setJam();
+    }, 4500);
+  }
+}
+
+// Thin wrappers
+async function go() {
+  return startJam();
+}
+async function goWithMode(kind) {
+  return startJam(kind);
 }
 
 window;
 
 document.getElementById("spin").addEventListener("click", go);
+const techBtn = document.getElementById("spin-technical");
+const abstractBtn = document.getElementById("spin-abstract");
+if (techBtn) techBtn.addEventListener("click", () => goWithMode("technical"));
+if (abstractBtn)
+  abstractBtn.addEventListener("click", () => goWithMode("abstract"));
 document.getElementById("replay-speech").addEventListener("click", async () => {
   await Tone.start();
   currentUtteranceId++;
