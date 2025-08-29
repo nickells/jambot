@@ -81,6 +81,21 @@
         }
       }
 
+      .loader {
+        font-size: 2rem;
+        animation: loader 250ms ease-in-out 0s 1 normal forwards;
+      }
+
+      @keyframes loader {
+        0% {
+          transform: scale(1);
+        }
+
+        100% {
+          transform: scale(1.2);
+        }
+      }
+
       button {
         appearance: none;
         border: none;

@@ -28,6 +28,40 @@ const synth = new Tone.MonoSynth({
 //play a middle 'C' for the duration of an 8th note
 const tempos = ["an upbeat", "a slow", "a midtempo", "a fast"];
 
+// Segment into graphemes so multi-codepoint emojis (VS16, ZWJ) don't split
+const _seg =
+  window.Intl && Intl.Segmenter
+    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+    : null;
+const loader = _seg
+  ? Array.from(
+      _seg.segment("🍚🍤🌭🍗🫑🧅🥬🍅🥒🧄🌿🥣🫒🧈🧂🌶️🥘"),
+      (s) => s.segment
+    )
+  : Array.from("🍚🍤🌭🍗🫑🧅🥬🍅🥒🧄🌿🥣🫒🧈🧂🌶️🥘");
+let loaderIndex = 0;
+let loaderId = null;
+const startLoader = () => {
+  const results = document.getElementById("results");
+  if (loaderId) {
+    clearInterval(loaderId);
+  }
+  results.innerHTML = `<span class="loader">${loader[loaderIndex]}</span>`;
+
+  loaderIndex = (loaderIndex + 1) % loader.length;
+  loaderId = setInterval(() => {
+    results.innerHTML = `<span class="loader">${loader[loaderIndex]}</span>`;
+    loaderIndex = (loaderIndex + 1) % loader.length;
+  }, 250);
+};
+
+const stopLoader = () => {
+  if (loaderId) {
+    clearInterval(loaderId);
+    loaderId = null;
+  }
+};
+
 const genres = [
   "rock",
   "pop",
@@ -207,6 +241,7 @@ function waitForVoices() {
   return new Promise((resolve) => {
     const synth = window.speechSynthesis;
     const voices = synth.getVoices();
+    console.log(voices);
     if (voices && voices.length) {
       resolve(voices);
       return;
@@ -272,6 +307,7 @@ const playScale = (key, mode) => {
   activeSequence.start("+0");
   if (Tone.Transport.state !== "started") {
     Tone.Transport.start();
+    debugger;
   }
 };
 
@@ -338,6 +374,8 @@ async function go() {
   const replaySpeech = document.getElementById("replay-speech");
   if (replaySpeech) replaySpeech.classList.remove("vis-hidden");
 
+  startLoader();
+
   // ensure AudioContext is started by user gesture
   await Tone.start();
   // Invalidate any prior utterance id and cancel ongoing speech/sequence
@@ -366,12 +404,21 @@ async function go() {
   // Begin loading voices now so they are ready in time
   voicesReadyPromise = waitForVoices();
 
+  setTimeout(() => {
+    stopLoader();
+    const results = document.getElementById("results");
+    results.innerHTML = `<span class="loader">🥗</span>`;
+  }, 250 * 13);
+
   // Schedule speech start exactly 4.5s from click
   pendingStartTimer = setTimeout(async () => {
     if (thisClickId !== currentUtteranceId) return; // another click occurred
     const voices = await voicesReadyPromise;
     console.log(voices.filter((v) => v.lang.includes("en-US")));
-    voice = voices.find((v) => v.name.includes("Aaron"));
+    voice =
+      voices.find((v) => v.name.includes("Aaron")) ||
+      voices.find((v) => v.name === "Alex");
+
     if (Math.random() < 0.5) {
       technicalJam();
     } else {
