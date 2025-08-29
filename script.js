@@ -454,7 +454,8 @@ async function startJam(kind) {
   const voices = await voicesReadyPromise;
   voice =
     voices.find((v) => v.name.includes("Aaron")) ||
-    voices.find((v) => v.name === "Alex");
+    voices.find((v) => v.name === "Alex") ||
+    voices[0];
 
   const setJam = () => {
     const replaySpeech = document.getElementById("replay-speech");
