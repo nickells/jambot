@@ -29,7 +29,7 @@ const synth = new Tone.MonoSynth({
 let samplerLoaded = false;
 let sampler;
 // Boost piano loudness a bit via a dedicated gain stage
-const pianoGain = new Tone.Gain(18).chain(chorus, reverb);
+const pianoGain = new Tone.Gain(4).chain(chorus, reverb);
 try {
   sampler = new Tone.Sampler({
     urls: {
@@ -287,7 +287,11 @@ let speechPrimed = false;
 function primeSpeechForIOS() {
   if (speechPrimed) return;
   try {
-    const u = new SpeechSynthesisUtterance("");
+    // Force iOS to "wake up" speech synthesis
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0.01; // Nearly silent
+    u.rate = 10; // Very fast
+    u.pitch = 0.1;
     window.speechSynthesis.speak(u);
     speechPrimed = true;
   } catch (_) {}
@@ -297,20 +301,43 @@ function primeSpeechForIOS() {
 function waitForVoices() {
   return new Promise((resolve) => {
     const speechSynthesis = window.speechSynthesis;
-    const voices = speechSynthesis.getVoices();
-    console.log(voices);
-    if (voices && voices.length) {
-      resolve(voices);
+    const initial = speechSynthesis.getVoices();
+    if (initial && initial.length) {
+      resolve(initial);
       return;
     }
-    const handler = () => {
+
+    let done = false;
+    const finish = (voices) => {
+      if (done) return;
+      done = true;
+      try {
+        speechSynthesis.removeEventListener("voiceschanged", onChange);
+      } catch (_) {}
+      resolve(voices || []);
+    };
+
+    const onChange = () => {
       const loaded = speechSynthesis.getVoices();
-      if (loaded && loaded.length) {
-        speechSynthesis.removeEventListener("voiceschanged", handler);
-        resolve(loaded);
+      console.log(loaded);
+      if (loaded && loaded.length) finish(loaded);
+    };
+    speechSynthesis.addEventListener("voiceschanged", onChange);
+
+    // Poll as a fallback (iOS sometimes doesn't fire voiceschanged)
+    let tries = 0;
+    const poll = () => {
+      if (done) return;
+      const v = speechSynthesis.getVoices();
+      console.log(v);
+      if (v && v.length) return finish(v);
+      if (tries++ < 30) {
+        setTimeout(poll, 100);
+      } else {
+        finish(v || []);
       }
     };
-    speechSynthesis.addEventListener("voiceschanged", handler);
+    poll();
   });
 }
 
@@ -363,7 +390,7 @@ const playScale = (key, mode) => {
   }
 };
 
-const technicalJam = () => {
+const technicalJam = async () => {
   const tempo = pick(tempos);
   const genre = pick(genres);
   const key = pick(keys);
@@ -381,20 +408,47 @@ const technicalJam = () => {
 
   // web speech synthesis
   const speechSynthesis = window.speechSynthesis;
+
+  // iOS fix: cancel any pending speech first
+  speechSynthesis.cancel();
+
+  // iOS sometimes needs a tiny delay after cancel
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
   const utterance = new SpeechSynthesisUtterance(speech);
-  utterance.voice = voice;
+  if (voice) utterance.voice = voice;
+  utterance.lang = (voice && voice.lang) || "en-US";
   utterance.rate = 0.5;
+  utterance.volume = 1.0;
+  utterance.pitch = 1.0;
 
   // Capture the current generation so only the latest click can trigger the scale
   const utteranceId = currentUtteranceId;
   currentUtterance = utterance;
+
+  // iOS debugging + scale trigger
+  utterance.onstart = () => console.log("Technical speech started");
   utterance.onend = () => {
+    console.log("Technical speech ended");
     if (utteranceId === currentUtteranceId) {
       playScale(key, mode);
     }
   };
+  utterance.onerror = (e) => console.log("Technical speech error:", e);
 
+  console.log("About to speak:", speech);
+  console.log("Using voice:", voice);
   speechSynthesis.speak(utterance);
+  console.log("Speak called");
+
+  // Always add read aloud button for reliable iOS support
+  const results = document.getElementById("results");
+  results.innerHTML += `<br><button onclick="
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('${speech.replace(/'/g, "\\'")}');
+    u.voice = speechSynthesis.getVoices().find(v => v.name === 'Fred') || speechSynthesis.getVoices()[0];
+    speechSynthesis.speak(u);
+  " style="margin-top: 12px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; cursor: pointer; margin-left: 12px;">🔊 Read Aloud</button>`;
 };
 
 const abstractJam = () => {
@@ -416,9 +470,31 @@ const abstractJam = () => {
   }
 
   const utterance = new SpeechSynthesisUtterance(speech);
-  utterance.voice = voice;
+  if (voice) utterance.voice = voice;
+  utterance.lang = (voice && voice.lang) || "en-US";
   utterance.rate = 0.5;
+  utterance.volume = 1.0;
+  utterance.pitch = 1.0;
+
+  // iOS debugging
+  utterance.onstart = () => console.log("Abstract speech started");
+  utterance.onend = () => console.log("Abstract speech ended");
+  utterance.onerror = (e) => console.log("Abstract speech error:", e);
+
+  console.log("About to speak abstract:", speech);
+  console.log("Using voice:", voice);
   speechSynthesis.speak(utterance);
+  console.log("Abstract speak called");
+
+  // Always add read aloud button for reliable iOS support
+  const results = document.getElementById("results");
+  results.innerHTML += `<br><button onclick="
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('${speech.replace(/'/g, "\\'")}');
+    u.voice = speechSynthesis.getVoices().find(v => v.name === 'Fred') || speechSynthesis.getVoices()[0];
+    speechSynthesis.speak(u);
+  " style="margin-top: 12px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; cursor: pointer;">🔊 Read Aloud</button>`;
+
   lastSpeechText = speech;
 };
 
@@ -465,10 +541,29 @@ async function startJam(kind) {
     }, 250 * 13);
   }
   const voices = await voicesReadyPromise;
+
   voice =
     voices.find((v) => v.name.includes("Aaron")) ||
     voices.find((v) => v.name === "Alex") ||
+    voices.find((v) => v.name === "Fred") ||
+    voices.find((v) => v.localService && v.lang.startsWith("en")) ||
     voices[0];
+
+  console.log("voice", voice);
+
+  // iOS: Test speech immediately in user gesture context
+  if (!speechPrimed) {
+    try {
+      const testUtterance = new SpeechSynthesisUtterance("Ready");
+      testUtterance.voice = voice;
+      testUtterance.volume = 0.1;
+      testUtterance.rate = 2;
+      window.speechSynthesis.speak(testUtterance);
+      console.log("iOS test speech triggered");
+    } catch (e) {
+      console.log("iOS test speech failed:", e);
+    }
+  }
 
   const setJam = () => {
     const replaySpeech = document.getElementById("replay-speech");
@@ -487,7 +582,10 @@ async function startJam(kind) {
     }
   };
 
-  if (SKIP_LOADER) {
+  // iOS Safari often needs speech to start immediately in user gesture
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (SKIP_LOADER || isIOS) {
     setJam();
   } else {
     // Schedule speech start exactly 4.5s from click
@@ -520,10 +618,18 @@ document.getElementById("replay-speech").addEventListener("click", async () => {
   const speechSynthesis = window.speechSynthesis;
   speechSynthesis.cancel();
   if (!lastSpeechText) return;
-  const utterance = new SpeechSynthesisUtterance(lastSpeechText);
-  utterance.voice = voice;
-  utterance.rate = 0.5;
-  speechSynthesis.speak(utterance);
+  try {
+    const utterance = new SpeechSynthesisUtterance(lastSpeechText);
+    utterance.text = lastSpeechText;
+    console.log("voice", voice);
+    if (voice) utterance.voice = voice;
+    utterance.lang = (voice && voice.lang) || "en-US";
+    utterance.rate = 0.5;
+    speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.log("error speaking");
+    console.log(e);
+  }
 });
 
 document.getElementById("replay-scale").addEventListener("click", async () => {
